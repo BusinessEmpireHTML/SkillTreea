@@ -9,14 +9,48 @@ export class SkillTree {
             portrait: Math.ceil(Math.random() * (config.numPortraits || 1)),
             level: 1
         };
+
+        this.container = null;
+        this.template = null;
+    }
+
+    mount(containerSelector, templateSelector) {
+        this.container = document.querySelector(containerSelector);
+        this.template = document.querySelector(templateSelector);
         
-        this.init();
+        if (!this.container || !this.template) {
+            throw new Error('Container or template not found');
+        }
+
+        this.init();        
     }
 
     init() {
         this.initializeSkills();
         this.bindEvents();
         this.loadFromHash();
+    }
+
+    render() {
+        this.container.innerHTML = '';
+
+        // Group skills by their tree/category
+        const skillTrees = this.groupSkillsByTree();
+
+        // Create columns for each tree
+        skillTrees.forEach(treeSkills => {
+            const column = document.createElement('div');
+            column.className = 'skill-tree-column';
+            
+            treeSkills.forEach(skill => {
+                const element = this.createSkillElement(skill);
+                column.appendChild(element);
+            });
+            
+            this.container.appendChild(column);
+        });
+        
+        this.updateDependencyLines();
     }
 
     initializeSkills() {
@@ -38,37 +72,28 @@ export class SkillTree {
         });
     }
 
-    // State management
-    getState() {
-        return {
-            skills: Array.from(this.skills.values()).map(skill => ({
-                id: skill.id,
-                points: skill.points
-            })),
-            portrait: this.state.portrait,
-            avatarName: this.state.avatarName
-        };
-    }
-
-    // Hash management
-    generateHash() {
-        const state = this.getState();
-        return btoa(JSON.stringify(state)); // Base64 encode for URL-friendly hash
-    }
-
-    loadFromHash() {
-        const hash = window.location.hash.slice(1);
-        if (hash) {
-            try {
-                const state = JSON.parse(atob(hash));
-                this.setState(state);
-            } catch (e) {
-                console.error('Invalid hash state');
-            }
+    createSkillElement(skill) {
+        const clone = this.template.content.cloneNode(true);
+        const skillElement = clone.querySelector('.skill');
+        
+        skillElement.dataset.skillId = skill.id;
+        
+        if (skill.icon) {
+            skillElement.querySelector('.icon').style.backgroundImage = `url(${skill.icon})`;
         }
+
+        const tooltip = skillElement.querySelector('.skill-tooltip');
+        tooltip.querySelector('.skill-name').textContent = skill.title;
+        tooltip.querySelector('.skill-description').textContent = skill.description;
+        
+        return skillElement;
     }
 
     bindEvents() {
+        // Skill interactions
+        this.container.addEventListener('click', (e) => this.handleSkillClick(e));
+        this.container.addEventListener('contextmenu', (e) => this.handleSkillRightClick(e));
+
         // Listen for hash changes to update the skill tree state
         window.addEventListener('hashchange', () => {
             this.loadFromHash();
@@ -141,6 +166,164 @@ export class SkillTree {
         });
     }
 
+    handleSkillClick(e) {
+        const skillEl = e.target.closest('.skill');
+        if (!skillEl) return;
+
+        const skillId = Number(skillEl.dataset.skillId);
+        const skill = this.skills.get(skillId);
+
+        if (skill && skill.addPoint()) {
+            this.updateSkillElement(skillEl, skill);
+            this.updateUI();
+        }
+
+        // Handle mobile tooltip
+        if (window.matchMedia('(hover: none)').matches) {
+            this.container.querySelectorAll('.skill.active').forEach(el => {
+                if (el !== skillEl) el.classList.remove('active');
+            });
+            skillEl.classList.toggle('active');
+        }
+    }
+
+    handleSkillRightClick(e) {
+        e.preventDefault();
+        const skillEl = e.target.closest('.skill');
+        if (!skillEl) return;
+
+        const skillId = Number(skillEl.dataset.skillId);
+        const skill = this.skills.get(skillId);
+
+        if (skill && skill.removePoint()) {
+            this.updateSkillElement(skillEl, skill);
+            this.updateUI();
+        }
+    }
+
+    updateSkillElement(element, skill) {
+        // Update points display
+        const pointsEl = element.querySelector('.skill-points');
+        if (pointsEl) {
+            pointsEl.innerHTML = `
+                <span class="points">${skill.points}</span>/<span class="max-points">${skill.maxPoints}</span>
+            `;
+        }
+
+        // Update skill state classes
+        element.classList.toggle('has-points', skill.hasPoints());
+        element.classList.toggle('has-max-points', skill.hasMaxPoints());
+        element.classList.toggle('can-add-points', skill.canAddPoint());
+
+        // Update rank descriptions
+        const currentRankEl = element.querySelector('.current-rank');
+        const nextRankEl = element.querySelector('.next-rank');
+        if (currentRankEl) {
+            currentRankEl.textContent = skill.getCurrentRankDescription();
+        }
+        if (nextRankEl) {
+            nextRankEl.textContent = skill.getNextRankDescription();
+        }
+    }
+
+    updatePortrait() {
+        const portrait = document.querySelector('.character-portrait');
+        if (portrait) {
+            portrait.style.backgroundImage = `url(portraits/${this.state.portrait}.png)`;
+        }
+    }
+
+    updateStats() {
+        const statsContainer = document.querySelector('.character-stats');
+        if (!statsContainer) return;
+
+        const stats = this.calculateStats();
+        statsContainer.innerHTML = '';
+
+        Object.entries(stats).forEach(([stat, value]) => {
+            const statEl = document.createElement('div');
+            statEl.className = 'stat';
+            statEl.innerHTML = `
+                <span class="stat-name">${stat}</span>
+                <span class="stat-value">${value}</span>
+            `;
+            statsContainer.appendChild(statEl);
+        });
+    }
+
+    updateDependencyLines() {
+        // Remove existing lines
+        this.container.querySelectorAll('.skill-dependency').forEach(el => el.remove());
+
+        this.skills.forEach(skill => {
+            if (skill.dependencies.size > 0) {
+                skill.dependencies.forEach(dep => {
+                    this.drawDependencyLine(dep.id, skill.id);
+                });
+            }
+        });
+    }
+
+    drawDependencyLine(fromId, toId) {
+        const fromEl = this.container.querySelector(`[data-skill-id="${fromId}"]`);
+        const toEl = this.container.querySelector(`[data-skill-id="${toId}"]`);
+        
+        if (!fromEl || !toEl) return;
+
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        const containerRect = this.container.getBoundingClientRect();
+
+        const line = document.createElement('div');
+        line.className = 'skill-dependency';
+        
+        // Calculate line position and length
+        const length = Math.abs(toRect.top - fromRect.top);
+        const width = Math.abs(toRect.left - fromRect.left);
+        
+        // Position line at the bottom center of the parent skill
+        const x1 = fromRect.left + (fromRect.width / 2) - containerRect.left;
+        const y1 = fromRect.top + fromRect.height - containerRect.top;
+        
+        // Calculate angle for diagonal lines
+        const angle = Math.atan2(width, length);
+        const finalLength = Math.hypot(width, length);
+
+        Object.assign(line.style, {
+            height: `${finalLength}px`,
+            transform: `translate(${x1}px, ${y1}px) rotate(${angle}rad)`,
+            transformOrigin: 'top',
+        });
+
+        this.container.appendChild(line);
+    }
+
+    groupSkillsByTree() {
+        const trees = new Map();
+        const rootSkills = new Set();
+
+        // Find root skills (those with no dependencies)
+        this.skills.forEach(skill => {
+            if (skill.dependencies.size === 0) {
+                rootSkills.add(skill);
+            }
+        });
+
+        // Create trees starting from each root skill
+        rootSkills.forEach(rootSkill => {
+            const tree = [rootSkill];
+            const addDependents = (skill) => {
+                const dependents = Array.from(skill.dependents);
+                tree.push(...dependents);
+                dependents.forEach(addDependents);
+            };
+            addDependents(rootSkill);
+            trees.set(rootSkill, tree);
+        });
+
+        return Array.from(trees.values());
+    }
+
     updateHash() {
         const hash = this.generateHash();
         window.location.hash = hash;
@@ -168,70 +351,40 @@ export class SkillTree {
         document.dispatchEvent(this.skillUpdateEvent);
     }
 
+    // State management
+    getState() {
+        return {
+            skills: Array.from(this.skills.values()).map(skill => ({
+                id: skill.id,
+                points: skill.points
+            })),
+            portrait: this.state.portrait,
+            avatarName: this.state.avatarName
+        };
+    }
+
     // Helper methods for state management
     toggleOpen() {
         this.state.isOpen = !this.state.isOpen;
         document.dispatchEvent(this.skillUpdateEvent);
     }
 
-    nextPortrait() {
-        this.state.portrait = (this.state.portrait % (this.config.numPortraits || 1)) + 1;
-        this.updateHash();
+    // Hash management
+    generateHash() {
+        const state = this.getState();
+        return btoa(JSON.stringify(state)); // Base64 encode for URL-friendly hash
     }
 
-    previousPortrait() {
-        this.state.portrait = this.state.portrait <= 1 ? 
-            (this.config.numPortraits || 1) : 
-            this.state.portrait - 1;
-        this.updateHash();
-    }
-
-    calculateStats() {
-        // Initialize stats with default values from config
-        const stats = { ...this.config.defaultStats };
-
-        // Calculate total stats from all skilled points
-        this.skills.forEach(skill => {
-            if (skill.points > 0) {
-                skill.stats.forEach(stat => {
-                    // Initialize stat if it doesn't exist
-                    if (!stats[stat.title]) {
-                        stats[stat.title] = 0;
-                    }
-                    // Add stat value multiplied by points invested
-                    stats[stat.title] += stat.value * skill.points;
-                });
+    loadFromHash() {
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+            try {
+                const state = JSON.parse(atob(hash));
+                this.setState(state);
+            } catch (e) {
+                console.error('Invalid hash state');
             }
-        });
-
-        return stats;
-    }
-
-    // Helper method to get all active talents
-    getTalents() {
-        const talents = new Set();
-        this.skills.forEach(skill => {
-            if (skill.points > 0) {
-                skill.talents.forEach(talent => talents.add(talent));
-            }
-        });
-        return Array.from(talents);
-    }
-
-    // Helper method to get total points spent
-    getTotalPoints() {
-        let total = 0;
-        this.skills.forEach(skill => {
-            total += skill.points;
-        });
-        return total;
-    }
-
-    // Helper method to calculate level based on points
-    calculateLevel() {
-        const totalPoints = this.getTotalPoints();
-        // You can adjust the level calculation formula
-        return Math.floor(totalPoints / 3) + 1;
+        }
     }
 }
 
