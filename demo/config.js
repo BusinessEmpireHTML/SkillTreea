@@ -12,6 +12,7 @@ export const skillConfig = {
             id: 1,
             title: 'Web UI Development',
             description: 'Proficient in building seamless, responsive user experiences across devices.',
+            points: 100,
             iconPath: toIconPath('htmx'),
         },
         {
@@ -19,6 +20,7 @@ export const skillConfig = {
             title: 'Cross-Platform Development',
             description: 'Experienced in Android & iOS cross-platform development ensuring consistent user experience.',
             dependsOn: [1],
+            points: 80,
             iconPath: toIconPath('android'),
         },
 
@@ -27,6 +29,7 @@ export const skillConfig = {
             id: 3,
             title: 'Generative AI Integration',
             description: 'Expertise in integrating generative AI into existing applications.',
+            points: 90,
             iconPath: toIconPath('googlegemini'),
         },
         {
@@ -34,6 +37,7 @@ export const skillConfig = {
             title: 'AI-Powered Tools',
             description: 'Skilled in developing AI-powered tools that provide contextual and personalized responses.',
             dependsOn: [3],
+            points: 70,
             iconPath: toIconPath('gnometerminal'),
         },
 
@@ -42,6 +46,7 @@ export const skillConfig = {
             id: 5,
             title: 'Product Strategy',
             description: 'Strong product thinking abilities with focus on understanding user needs.',
+            points: 70,
             iconPath: toIconPath('figma'),
         },
         {
@@ -49,6 +54,7 @@ export const skillConfig = {
             title: 'Rapid Prototyping',
             description: 'Proven ability to rapidly prototype and iterate on ideas.',
             dependsOn: [5],
+            points: 95,
             iconPath: toIconPath('excalidraw'),
         },
 
@@ -57,6 +63,7 @@ export const skillConfig = {
             id: 7,
             title: 'System Reliability',
             description: 'Experienced in implementing systems for reliability and continuous availability.',
+            points: 80,
             iconPath: toIconPath('amazoncloudwatch'),
         },
         {
@@ -64,6 +71,7 @@ export const skillConfig = {
             title: 'Quality Assurance',
             description: 'Strong focus on quality assurance through iterative testing and evaluations.',
             dependsOn: [7],
+            points: 80,
             iconPath: toIconPath('protodotio'),
         }
     ]

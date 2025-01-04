@@ -1,278 +1,206 @@
 // Core SkillTree class
 export class SkillTree {
-    constructor(config) {
-        this.config = config;
-        this.skills = new Map();
-        this.state = {};
+  constructor(config) {
+    this.config = config;
+    this.skills = new Map();
+    this.state = {};
 
-        this.container = null;
-        this.template = null;
+    this.container = null;
+    this.template = null;
+  }
+
+  mount(containerSelector, templateSelector) {
+    this.container = document.querySelector(containerSelector);
+    this.template = document.querySelector(templateSelector);
+
+    if (!this.container || !this.template) {
+      throw new Error('Container or template not found');
     }
 
-    mount(containerSelector, templateSelector) {
-        this.container = document.querySelector(containerSelector);
-        this.template = document.querySelector(templateSelector);
-        
-        if (!this.container || !this.template) {
-            throw new Error('Container or template not found');
-        }
+    this.init();
+  }
 
-        this.init();        
-    }
+  init() {
+    this.initializeSkills();
+    this.bindEvents();
+    this.render();
+  }
 
-    init() {
-        this.initializeSkills();
-        this.bindEvents();
-        this.render();
-    }
+  render() {
+    this.container.innerHTML = '';
 
-    render() {
-        this.container.innerHTML = '';
+    // Group skills by their tree/category
+    const skillTrees = this.groupSkillsByTree();
 
-        // Group skills by their tree/category
-        const skillTrees = this.groupSkillsByTree();
+    // Create columns for each tree
+    skillTrees.forEach(treeSkills => {
+      const column = document.createElement('div');
+      column.className = 'skill-tree-column';
 
-        // Create columns for each tree
-        skillTrees.forEach(treeSkills => {
-            const column = document.createElement('div');
-            column.className = 'skill-tree-column';
-            
-            treeSkills.forEach(skill => {
-                const element = this.createSkillElement(skill);
-                column.appendChild(element);
-            });
-            
-            this.container.appendChild(column);
+      treeSkills.forEach(skill => {
+        const element = this.createSkillElement(skill);
+        column.appendChild(element);
+      });
+
+      this.container.appendChild(column);
+    });
+
+    this.updateDependencyLines();
+  }
+
+  initializeSkills() {
+    // Create skill instances
+    this.config.skills.forEach(skillData => {
+      const skill = new Skill(skillData);
+      this.skills.set(skill.id, skill);
+    });
+
+    // Wire up dependencies
+    this.config.skills.forEach(skillData => {
+      if (skillData.dependsOn) {
+        const dependent = this.skills.get(skillData.id);
+        skillData.dependsOn.forEach(depId => {
+          const dependency = this.skills.get(depId);
+          dependent.addDependency(dependency);
         });
-        
-        this.updateDependencyLines();
-    }
+      }
+    });
+  }
 
-    initializeSkills() {
-        // Create skill instances
-        this.config.skills.forEach(skillData => {
-            const skill = new Skill(skillData);
-            this.skills.set(skill.id, skill);
+  createSkillElement(skill) {
+    const clone = this.template.content.cloneNode(true);
+    const skillElement = clone.querySelector('.skill');
+
+    skill.fillElement(skillElement);
+
+    return skillElement;
+  }
+
+  bindEvents() {
+    this.container.addEventListener('click', (e) => this.handleSkillClick(e));
+  }
+
+  handleSkillClick(e) {
+    const skillEl = e.target.closest('.skill');
+    if (!skillEl) return;
+
+    // Handle mobile tooltip
+    if (window.matchMedia('(hover: none)').matches) {
+      this.container.querySelectorAll('.skill.active').forEach(el => {
+        if (el !== skillEl) el.classList.remove('active');
+      });
+      skillEl.classList.toggle('active');
+    }
+  }
+
+  updateDependencyLines() {
+    // Remove existing lines
+    this.container.querySelectorAll('.skill-dependency').forEach(el => el.remove());
+
+    this.skills.forEach(skill => {
+      if (skill.dependencies.size > 0) {
+        skill.dependencies.forEach(dep => {
+          this.drawDependencyLine(dep.id, skill.id);
         });
+      }
+    });
+  }
 
-        // Wire up dependencies
-        this.config.skills.forEach(skillData => {
-            if (skillData.dependsOn) {
-                const dependent = this.skills.get(skillData.id);
-                skillData.dependsOn.forEach(depId => {
-                    const dependency = this.skills.get(depId);
-                    dependent.addDependency(dependency);
-                });
-            }
-        });
-    }
+  drawDependencyLine(fromId, toId) {
+    const fromEl = this.container.querySelector(`[data-skill-id="${fromId}"]`);
+    const toEl = this.container.querySelector(`[data-skill-id="${toId}"]`);
 
-    createSkillElement(skill) {
-        const clone = this.template.content.cloneNode(true);
-        const skillElement = clone.querySelector('.skill');
-        
-        skillElement.dataset.skillId = skill.id;
-        
-        if (skill.iconPath) {
-            const iconElement = skillElement.querySelector('.icon');
-            iconElement.src = skill.iconPath;
-            iconElement.alt = skill.title;
-        }
+    if (!fromEl || !toEl) return;
 
-        const tooltip = skillElement.querySelector('.skill-tooltip');
-        tooltip.querySelector('.skill-name').textContent = skill.title;
-        tooltip.querySelector('.skill-description').textContent = skill.description;
-        
-        return skillElement;
-    }
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+    const containerRect = this.container.getBoundingClientRect();
 
-    bindEvents() {
-        this.container.addEventListener('click', (e) => this.handleSkillClick(e));
-    }
+    const line = document.createElement('div');
+    line.className = 'skill-dependency';
 
-    handleSkillClick(e) {
-        const skillEl = e.target.closest('.skill');
-        if (!skillEl) return;
+    // Calculate line position and length
+    const length = Math.abs(toRect.top - fromRect.top);
+    const width = Math.abs(toRect.left - fromRect.left);
 
-        // Handle mobile tooltip
-        if (window.matchMedia('(hover: none)').matches) {
-            this.container.querySelectorAll('.skill.active').forEach(el => {
-                if (el !== skillEl) el.classList.remove('active');
-            });
-            skillEl.classList.toggle('active');
-        }
-    }
+    // Position line at the bottom center of the parent skill
+    const x1 = fromRect.left + (fromRect.width / 2) - containerRect.left;
+    const y1 = fromRect.top + fromRect.height - containerRect.top;
 
-    updateDependencyLines() {
-        // Remove existing lines
-        this.container.querySelectorAll('.skill-dependency').forEach(el => el.remove());
+    // Calculate angle for diagonal lines
+    const angle = Math.atan2(width, length);
+    const finalLength = Math.hypot(width, length);
 
-        this.skills.forEach(skill => {
-            if (skill.dependencies.size > 0) {
-                skill.dependencies.forEach(dep => {
-                    this.drawDependencyLine(dep.id, skill.id);
-                });
-            }
-        });
-    }
+    Object.assign(line.style, {
+      height: `${finalLength}px`,
+      transform: `translate(${x1}px, ${y1}px) rotate(${angle}rad)`,
+      transformOrigin: 'top',
+    });
 
-    drawDependencyLine(fromId, toId) {
-        const fromEl = this.container.querySelector(`[data-skill-id="${fromId}"]`);
-        const toEl = this.container.querySelector(`[data-skill-id="${toId}"]`);
-        
-        if (!fromEl || !toEl) return;
+    this.container.appendChild(line);
+  }
 
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-        const containerRect = this.container.getBoundingClientRect();
+  groupSkillsByTree() {
+    const trees = new Map();
+    const rootSkills = new Set();
 
-        const line = document.createElement('div');
-        line.className = 'skill-dependency';
-        
-        // Calculate line position and length
-        const length = Math.abs(toRect.top - fromRect.top);
-        const width = Math.abs(toRect.left - fromRect.left);
-        
-        // Position line at the bottom center of the parent skill
-        const x1 = fromRect.left + (fromRect.width / 2) - containerRect.left;
-        const y1 = fromRect.top + fromRect.height - containerRect.top;
-        
-        // Calculate angle for diagonal lines
-        const angle = Math.atan2(width, length);
-        const finalLength = Math.hypot(width, length);
+    // Find root skills (those with no dependencies)
+    this.skills.forEach(skill => {
+      if (skill.dependencies.size === 0) {
+        rootSkills.add(skill);
+      }
+    });
 
-        Object.assign(line.style, {
-            height: `${finalLength}px`,
-            transform: `translate(${x1}px, ${y1}px) rotate(${angle}rad)`,
-            transformOrigin: 'top',
-        });
+    // Create trees starting from each root skill
+    rootSkills.forEach(rootSkill => {
+      const tree = [rootSkill];
+      const addDependents = (skill) => {
+        const dependents = Array.from(skill.dependents);
+        tree.push(...dependents);
+        dependents.forEach(addDependents);
+      };
+      addDependents(rootSkill);
+      trees.set(rootSkill, tree);
+    });
 
-        this.container.appendChild(line);
-    }
-
-    groupSkillsByTree() {
-        const trees = new Map();
-        const rootSkills = new Set();
-
-        // Find root skills (those with no dependencies)
-        this.skills.forEach(skill => {
-            if (skill.dependencies.size === 0) {
-                rootSkills.add(skill);
-            }
-        });
-
-        // Create trees starting from each root skill
-        rootSkills.forEach(rootSkill => {
-            const tree = [rootSkill];
-            const addDependents = (skill) => {
-                const dependents = Array.from(skill.dependents);
-                tree.push(...dependents);
-                dependents.forEach(addDependents);
-            };
-            addDependents(rootSkill);
-            trees.set(rootSkill, tree);
-        });
-
-        return Array.from(trees.values());
-    }
-
-    setState(state) {
-        (state.skills || []).forEach(skillState => {
-            const skill = this.skills.get(skillState.id);
-            if (skill) {
-                skill.points = skillState.points;
-            }
-        });
-    }
-
-    // State management
-    getState() {
-        return {
-            skills: Array.from(this.skills.values()).map(skill => ({
-                id: skill.id,
-                points: skill.points
-            })),
-        };
-    }
+    return Array.from(trees.values());
+  }
 }
 
 // Skill class
 class Skill {
-    constructor(data) {
-        this.id = data.id;
-        this.title = data.title;
-        this.description = data.description;
-        this.maxPoints = data.maxPoints || 1;
-        this.points = 0;
-        this.dependencies = new Set();
-        this.dependents = new Set();
-        this.stats = data.stats || [];
-        this.talents = data.talents || [];
-        this.rankDescriptions = data.rankDescriptions || [];
-        this.iconPath = data.iconPath;
+  constructor(data) {
+    this.id = data.id;
+    this.title = data.title;
+    this.description = data.description;
+    this.iconPath = data.iconPath;
+    this.points = data.points;
+
+    this.dependencies = new Set();
+    this.dependents = new Set();
+  }
+
+  fillElement(skillElement) {
+    skillElement.dataset.skillId = this.id;
+
+    if (this.iconPath) {
+      const iconElement = skillElement.querySelector('.icon');
+      iconElement.src = this.iconPath;
+      iconElement.alt = this.title;
     }
 
-    // Add this method
-    addDependency(skill) {
-        if (skill && skill instanceof Skill) {
-            this.dependencies.add(skill);
-            skill.dependents.add(this);
-        }
-    }
+    const progressBar = skillElement.querySelector('.points');
+    progressBar.value = this.points;
 
-    canAddPoint() {
-        return this.dependenciesFulfilled() && this.points < this.maxPoints;
-    }
+    const tooltip = skillElement.querySelector('.skill-tooltip');
+    tooltip.querySelector('.skill-name').textContent = this.title;
+    tooltip.querySelector('.skill-description').textContent = this.description;
+  }
 
-    canRemovePoint() {
-        return this.points > 0 && 
-               (!this.hasUsedDependents() || this.points > 1);
+  addDependency(skill) {
+    if (skill && skill instanceof Skill) {
+      this.dependencies.add(skill);
+      skill.dependents.add(this);
     }
-
-    addPoint() {
-        if (this.canAddPoint()) {
-            this.points++;
-            return true;
-        }
-        return false;
-    }
-
-    removePoint() {
-        if (this.canRemovePoint()) {
-            this.points--;
-            return true;
-        }
-        return false;
-    }
-
-    dependenciesFulfilled() {
-        return Array.from(this.dependencies)
-            .every(dep => dep.points > 0);
-    }
-
-    hasUsedDependents() {
-        return Array.from(this.dependents)
-            .some(dep => dep.points > 0);
-    }
-
-    // Helper methods for UI
-    hasPoints() {
-        return this.points > 0;
-    }
-
-    hasMaxPoints() {
-        return this.points >= this.maxPoints;
-    }
-
-    hasDependencies() {
-        return this.dependencies.size > 0;
-    }
-
-    getCurrentRankDescription() {
-        return this.rankDescriptions[this.points - 1] || '';
-    }
-
-    getNextRankDescription() {
-        return this.rankDescriptions[this.points] || '';
-    }
+  }
 }
