@@ -29,17 +29,17 @@ export class SkillTree {
   }
 
   render() {
+    if (!this.container) return;
     this.container.innerHTML = '';
 
-    // Group skills by their tree/category
-    const skillTrees = this.groupSkillsByTree();
+    const skillLevels = this.groupSkillsByTree();
 
-    // Create columns for each tree
-    skillTrees.forEach(treeSkills => {
+    // Create a column for each level
+    skillLevels.forEach((levelSkills, level) => {
       const column = document.createElement('div');
       column.className = 'skill-tree-column';
 
-      treeSkills.forEach(skill => {
+      levelSkills.forEach(skill => {
         const element = this.createSkillElement(skill);
         column.appendChild(element);
       });
@@ -51,13 +51,12 @@ export class SkillTree {
   }
 
   initializeSkills() {
-    // Create skill instances
-    this.config.skills.forEach(skillData => {
-      const skill = new Skill(skillData);
-      this.skills.set(skill.id, skill);
+    // First create all skill instances
+    this.config.skills.forEach(data => {
+      this.skills.set(data.id, new Skill(data));
     });
 
-    // Wire up dependencies
+    // Then wire up dependencies
     this.config.skills.forEach(skillData => {
       if (skillData.dependsOn) {
         const dependent = this.skills.get(skillData.id);
@@ -73,9 +72,7 @@ export class SkillTree {
     const clone = this.template.content.cloneNode(true);
     const skillElement = clone.querySelector('.skill');
 
-    skill.fillElement(skillElement);
-
-    return skillElement;
+    return skill.fillElement(skillElement);
   }
 
   bindEvents() {
@@ -107,8 +104,12 @@ export class SkillTree {
     this.container.querySelectorAll('.skill-dependency').forEach(el => el.remove());
 
     // Create a container for dependency lines
-    const linesContainer = document.createElement('div');
-    linesContainer.className = 'skill-dependency-container';
+    let linesContainer = document.querySelector('.skill-dependency-container');
+    if (!linesContainer) {
+      linesContainer = document.createElement('div');
+      linesContainer.className = 'skill-dependency-container';
+    }
+
     this.container.appendChild(linesContainer);
 
     // Draw dependencies for each skill
@@ -239,12 +240,14 @@ class Skill {
     const tooltip = skillElement.querySelector('.skill-tooltip');
     tooltip.querySelector('.skill-name').textContent = this.title;
     tooltip.querySelector('.skill-description').textContent = this.description;
+
+    return skillElement;
   }
 
   addDependency(skill) {
-    if (skill && skill instanceof Skill) {
-      this.dependencies.add(skill);
-      skill.dependents.add(this);
-    }
+    if (!skill || !(skill instanceof Skill)) { return; }
+
+    this.dependencies.add(skill);
+    skill.dependents.add(this);
   }
 }

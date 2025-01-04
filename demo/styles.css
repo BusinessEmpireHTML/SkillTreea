@@ -31,18 +31,16 @@ body {
 /* Main Layout */
 .skill-tree {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 20px;
-  padding: 20px;
-  height: 100vh;
+  grid-template-columns: 1fr;
+  height: 80vh;
   overflow: hidden;
 }
 
 /* Skills Container */
 .skills-container {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: row;
   gap: var(--skill-gap);
   background: var(--primary-color);
   padding: 40px 20px;
@@ -55,7 +53,7 @@ body {
 .skill-tree-column {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  width: 300px;
   gap: var(--skill-gap);
   z-index: 0;
 }
@@ -85,14 +83,12 @@ body {
 
 .skill-dependency-container {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: -1;
 }
-
 /* Skill Dependencies */
 .skill-dependency {
   position: absolute;
@@ -199,8 +195,16 @@ body {
   }
 
   .skills-container {
-    padding: 20px 10px;
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .skill-tree-column {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
   }
 
   .skill {
