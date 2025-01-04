@@ -28,7 +28,7 @@ export class SkillTree {
     init() {
         this.initializeSkills();
         this.bindEvents();
-        this.loadFromHash();
+        this.render();
     }
 
     render() {
@@ -90,93 +90,12 @@ export class SkillTree {
     }
 
     bindEvents() {
-        // Skill interactions
         this.container.addEventListener('click', (e) => this.handleSkillClick(e));
-        this.container.addEventListener('contextmenu', (e) => this.handleSkillRightClick(e));
-
-        // Listen for hash changes to update the skill tree state
-        window.addEventListener('hashchange', () => {
-            this.loadFromHash();
-        });
-
-        // Handle keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'Escape':
-                    this.state.isOpen = false;
-                    break;
-                case 'Enter':
-                    this.state.isOpen = true;
-                    break;
-            }
-        });
-
-        // Handle skill point allocation via keyboard
-        document.addEventListener('keydown', (e) => {
-            if (!this.state.isOpen) return;
-
-            const activeElement = document.activeElement;
-            if (!activeElement?.closest('.skill')) return;
-
-            const skillId = Number(activeElement.closest('.skill').dataset.skillId);
-            const skill = this.skills.get(skillId);
-
-            if (!skill) return;
-
-            switch(e.key) {
-                case '+':
-                case '=':
-                    if (e.preventDefault) e.preventDefault();
-                    skill.addPoint();
-                    this.updateHash();
-                    break;
-                case '-':
-                    if (e.preventDefault) e.preventDefault();
-                    skill.removePoint();
-                    this.updateHash();
-                    break;
-            }
-        });
-
-        // Custom event for skill updates
-        this.skillUpdateEvent = new CustomEvent('skilltree:update', {
-            bubbles: true,
-            detail: {
-                skills: this.skills,
-                state: this.state
-            }
-        });
-
-        // Dispatch event when skills are updated
-        const dispatchUpdate = () => {
-            document.dispatchEvent(this.skillUpdateEvent);
-        };
-
-        // Observe skill changes
-        this.skills.forEach(skill => {
-            Object.defineProperty(skill, 'points', {
-                get: function() {
-                    return this._points || 0;
-                },
-                set: function(value) {
-                    this._points = value;
-                    dispatchUpdate();
-                }
-            });
-        });
     }
 
     handleSkillClick(e) {
         const skillEl = e.target.closest('.skill');
         if (!skillEl) return;
-
-        const skillId = Number(skillEl.dataset.skillId);
-        const skill = this.skills.get(skillId);
-
-        if (skill && skill.addPoint()) {
-            this.updateSkillElement(skillEl, skill);
-            this.updateUI();
-        }
 
         // Handle mobile tooltip
         if (window.matchMedia('(hover: none)').matches) {
@@ -185,70 +104,6 @@ export class SkillTree {
             });
             skillEl.classList.toggle('active');
         }
-    }
-
-    handleSkillRightClick(e) {
-        e.preventDefault();
-        const skillEl = e.target.closest('.skill');
-        if (!skillEl) return;
-
-        const skillId = Number(skillEl.dataset.skillId);
-        const skill = this.skills.get(skillId);
-
-        if (skill && skill.removePoint()) {
-            this.updateSkillElement(skillEl, skill);
-            this.updateUI();
-        }
-    }
-
-    updateSkillElement(element, skill) {
-        // Update points display
-        const pointsEl = element.querySelector('.skill-points');
-        if (pointsEl) {
-            pointsEl.innerHTML = `
-                <span class="points">${skill.points}</span>/<span class="max-points">${skill.maxPoints}</span>
-            `;
-        }
-
-        // Update skill state classes
-        element.classList.toggle('has-points', skill.hasPoints());
-        element.classList.toggle('has-max-points', skill.hasMaxPoints());
-        element.classList.toggle('can-add-points', skill.canAddPoint());
-
-        // Update rank descriptions
-        const currentRankEl = element.querySelector('.current-rank');
-        const nextRankEl = element.querySelector('.next-rank');
-        if (currentRankEl) {
-            currentRankEl.textContent = skill.getCurrentRankDescription();
-        }
-        if (nextRankEl) {
-            nextRankEl.textContent = skill.getNextRankDescription();
-        }
-    }
-
-    updatePortrait() {
-        const portrait = document.querySelector('.character-portrait');
-        if (portrait) {
-            portrait.style.backgroundImage = `url(portraits/${this.state.portrait}.png)`;
-        }
-    }
-
-    updateStats() {
-        const statsContainer = document.querySelector('.character-stats');
-        if (!statsContainer) return;
-
-        const stats = this.calculateStats();
-        statsContainer.innerHTML = '';
-
-        Object.entries(stats).forEach(([stat, value]) => {
-            const statEl = document.createElement('div');
-            statEl.className = 'stat';
-            statEl.innerHTML = `
-                <span class="stat-name">${stat}</span>
-                <span class="stat-value">${value}</span>
-            `;
-            statsContainer.appendChild(statEl);
-        });
     }
 
     updateDependencyLines() {
@@ -324,11 +179,6 @@ export class SkillTree {
         return Array.from(trees.values());
     }
 
-    updateHash() {
-        const hash = this.generateHash();
-        window.location.hash = hash;
-    }
-
     setState(state) {
         if (state.skills) {
             state.skills.forEach(skillState => {
@@ -339,16 +189,8 @@ export class SkillTree {
             });
         }
 
-        if (state.portrait) {
-            this.state.portrait = state.portrait;
-        }
-
-        if (state.avatarName) {
-            this.state.avatarName = state.avatarName;
-        }
-
-        // Dispatch update event
-        document.dispatchEvent(this.skillUpdateEvent);
+        this.state.portrait ||= state.portrait;
+        this.state.avatarName ||= state.avatarName;
     }
 
     // State management
@@ -366,25 +208,6 @@ export class SkillTree {
     // Helper methods for state management
     toggleOpen() {
         this.state.isOpen = !this.state.isOpen;
-        document.dispatchEvent(this.skillUpdateEvent);
-    }
-
-    // Hash management
-    generateHash() {
-        const state = this.getState();
-        return btoa(JSON.stringify(state)); // Base64 encode for URL-friendly hash
-    }
-
-    loadFromHash() {
-        const hash = window.location.hash.slice(1);
-        if (hash) {
-            try {
-                const state = JSON.parse(atob(hash));
-                this.setState(state);
-            } catch (e) {
-                console.error('Invalid hash state');
-            }
-        }
     }
 }
 
