@@ -1,3 +1,10 @@
+/** Check out https://simpleicons.org/?q=html for the icons you can use. */
+const BASE_PATH= 'https://cdn.jsdelivr.net/npm/simple-icons@14.0.1/icons/';
+
+function toIconPath(name) {
+  return `${BASE_PATH}${name}.svg`;
+}
+
 export const skillConfig = {
     numPortraits: 1,
     defaultStats: {
@@ -22,7 +29,7 @@ export const skillConfig = {
                 { title: 'Frontend', value: 2 }
             ],
             talents: ['UI/UX'],
-            icon: 'web-ui.png'
+            iconPath: toIconPath('htmx'),
         },
         {
             id: 2,
@@ -39,7 +46,7 @@ export const skillConfig = {
                 { title: 'Frontend', value: 2 }
             ],
             talents: ['Mobile Development'],
-            icon: 'mobile.png'
+            iconPath: toIconPath('android'),
         },
 
         // AI Integration Branch
@@ -57,7 +64,7 @@ export const skillConfig = {
                 { title: 'AI Integration', value: 2 }
             ],
             talents: ['AI Systems'],
-            icon: 'ai.png'
+            iconPath: toIconPath('googlegemini'),
         },
         {
             id: 4,
@@ -74,7 +81,7 @@ export const skillConfig = {
                 { title: 'AI Integration', value: 2 }
             ],
             talents: ['AI Tools'],
-            icon: 'ai-tools.png'
+            iconPath: toIconPath('gnometerminal'),
         },
 
         // Product Strategy Branch
@@ -92,7 +99,7 @@ export const skillConfig = {
                 { title: 'Product Strategy', value: 2 }
             ],
             talents: ['Strategy'],
-            icon: 'strategy.png'
+            iconPath: toIconPath('figma'),
         },
         {
             id: 6,
@@ -109,7 +116,7 @@ export const skillConfig = {
                 { title: 'Product Strategy', value: 2 }
             ],
             talents: ['Prototyping'],
-            icon: 'prototype.png'
+            iconPath: toIconPath('excalidraw'),
         },
 
         // Reliability Branch
@@ -127,7 +134,7 @@ export const skillConfig = {
                 { title: 'Reliability', value: 2 }
             ],
             talents: ['Systems'],
-            icon: 'reliability.png'
+            iconPath: toIconPath('amazoncloudwatch'),
         },
         {
             id: 8,
@@ -144,7 +151,7 @@ export const skillConfig = {
                 { title: 'Reliability', value: 2 }
             ],
             talents: ['Quality'],
-            icon: 'quality.png'
+            iconPath: toIconPath('protodotio'),
         }
     ]
 };

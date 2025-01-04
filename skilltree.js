@@ -78,8 +78,10 @@ export class SkillTree {
         
         skillElement.dataset.skillId = skill.id;
         
-        if (skill.icon) {
-            skillElement.querySelector('.icon').style.backgroundImage = `url(${skill.icon})`;
+        if (skill.iconPath) {
+            const iconElement = skillElement.querySelector('.icon');
+            iconElement.src = skill.iconPath;
+            iconElement.alt = skill.title;
         }
 
         const tooltip = skillElement.querySelector('.skill-tooltip');
@@ -224,7 +226,7 @@ class Skill {
         this.stats = data.stats || [];
         this.talents = data.talents || [];
         this.rankDescriptions = data.rankDescriptions || [];
-        this.icon = data.icon;
+        this.iconPath = data.iconPath;
     }
 
     // Add this method
