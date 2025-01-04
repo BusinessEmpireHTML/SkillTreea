@@ -21,8 +21,10 @@ export class SkillTree {
   }
 
   init() {
-    this.initializeSkills();
     this.bindEvents();
+    this.bindResizeObserver();
+
+    this.initializeSkills();
     this.render();
   }
 
@@ -80,6 +82,13 @@ export class SkillTree {
     this.container.addEventListener('click', (e) => this.handleSkillClick(e));
   }
 
+  bindResizeObserver() {
+    const resizeObserver = new ResizeObserver(() => {
+      this.updateDependencyLines();
+    });
+    resizeObserver.observe(this.container);
+  }
+
   handleSkillClick(e) {
     const skillEl = e.target.closest('.skill');
     if (!skillEl) return;
@@ -97,48 +106,83 @@ export class SkillTree {
     // Remove existing lines
     this.container.querySelectorAll('.skill-dependency').forEach(el => el.remove());
 
+    // Create a container for dependency lines
+    const linesContainer = document.createElement('div');
+    linesContainer.className = 'skill-dependency-container';
+    this.container.appendChild(linesContainer);
+
+    // Draw dependencies for each skill
     this.skills.forEach(skill => {
-      if (skill.dependencies.size > 0) {
-        skill.dependencies.forEach(dep => {
-          this.drawDependencyLine(dep.id, skill.id);
-        });
-      }
+        if (skill.dependencies.size > 0) {
+            this.drawMultipleDependencyLines(skill, Array.from(skill.dependencies), linesContainer);
+        }
     });
-  }
+}
 
-  drawDependencyLine(fromId, toId) {
-    const fromEl = this.container.querySelector(`[data-skill-id="${fromId}"]`);
-    const toEl = this.container.querySelector(`[data-skill-id="${toId}"]`);
+drawMultipleDependencyLines(toSkill, fromSkills, container) {
+    const toEl = this.container.querySelector(`[data-skill-id="${toSkill.id}"]`);
+    if (!toEl) return;
 
-    if (!fromEl || !toEl) return;
-
-    const fromRect = fromEl.getBoundingClientRect();
     const toRect = toEl.getBoundingClientRect();
     const containerRect = this.container.getBoundingClientRect();
 
-    const line = document.createElement('div');
-    line.className = 'skill-dependency';
+    // Get all dependency elements and their positions
+    const deps = fromSkills.map(skill => {
+        const el = this.container.querySelector(`[data-skill-id="${skill.id}"]`);
+        return {
+            el,
+            rect: el.getBoundingClientRect()
+        };
+    }).filter(dep => dep.el);
 
-    // Calculate line position and length
-    const length = Math.abs(toRect.top - fromRect.top);
-    const width = Math.abs(toRect.left - fromRect.left);
+    if (deps.length === 0) return;
 
-    // Position line at the bottom center of the parent skill
-    const x1 = fromRect.left + (fromRect.width / 2) - containerRect.left;
-    const y1 = fromRect.top + fromRect.height - containerRect.top;
+    // Calculate the horizontal line position
+    const minX = Math.min(...deps.map(d => d.rect.left + d.rect.width / 2));
+    const maxX = Math.max(...deps.map(d => d.rect.left + d.rect.width / 2));
+    const midY = Math.max(...deps.map(d => d.rect.bottom)) + 
+                (toRect.top - Math.max(...deps.map(d => d.rect.bottom))) / 2;
 
-    // Calculate angle for diagonal lines
-    const angle = Math.atan2(width, length);
-    const finalLength = Math.hypot(width, length);
+    // Draw horizontal connecting line
+    if (deps.length > 1) {
+        const horizontalLine = document.createElement('div');
+        horizontalLine.className = 'skill-dependency horizontal';
+        Object.assign(horizontalLine.style, {
+            position: 'absolute',
+            left: `${minX - containerRect.left}px`,
+            top: `${midY - containerRect.top}px`,
+            width: `${maxX - minX}px`,
+            height: '2px'
+        });
+        container.appendChild(horizontalLine);
+    }
 
-    Object.assign(line.style, {
-      height: `${finalLength}px`,
-      transform: `translate(${x1}px, ${y1}px) rotate(${angle}rad)`,
-      transformOrigin: 'top',
+    // Draw vertical lines from dependencies to horizontal line
+    deps.forEach(dep => {
+        const verticalTop = document.createElement('div');
+        verticalTop.className = 'skill-dependency vertical';
+        Object.assign(verticalTop.style, {
+            position: 'absolute',
+            left: `${dep.rect.left + dep.rect.width / 2 - containerRect.left}px`,
+            top: `${dep.rect.bottom - containerRect.top}px`,
+            height: `${midY - dep.rect.bottom}px`,
+            width: '2px'
+        });
+        container.appendChild(verticalTop);
     });
 
-    this.container.appendChild(line);
-  }
+    // Draw vertical line from horizontal line to target skill
+    const verticalBottom = document.createElement('div');
+    verticalBottom.className = 'skill-dependency vertical';
+    Object.assign(verticalBottom.style, {
+        position: 'absolute',
+        left: `${toRect.left + toRect.width / 2 - containerRect.left}px`,
+        top: `${midY - containerRect.top}px`,
+        height: `${toRect.top - midY}px`,
+        width: '2px'
+    });
+    container.appendChild(verticalBottom);
+}
 
   groupSkillsByTree() {
     const trees = new Map();

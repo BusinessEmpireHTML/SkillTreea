@@ -73,6 +73,14 @@ export const skillConfig = {
             dependsOn: [7],
             points: 80,
             iconPath: toIconPath('protodotio'),
+        },
+        {
+            id: 9,
+            title: 'Uptime monitoring',
+            description: 'Familiar with Cloud services and principles of maintain high-availability services.',
+            dependsOn: [7],
+            points: 60,
+            iconPath: toIconPath('awselasticloadbalancing'),
         }
     ]
 };
