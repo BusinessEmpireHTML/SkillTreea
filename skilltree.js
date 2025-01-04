@@ -3,12 +3,7 @@ export class SkillTree {
     constructor(config) {
         this.config = config;
         this.skills = new Map();
-        this.state = {
-            isOpen: true,
-            avatarName: 'Your Name',
-            portrait: Math.ceil(Math.random() * (config.numPortraits || 1)),
-            level: 1
-        };
+        this.state = {};
 
         this.container = null;
         this.template = null;
@@ -182,17 +177,12 @@ export class SkillTree {
     }
 
     setState(state) {
-        if (state.skills) {
-            state.skills.forEach(skillState => {
-                const skill = this.skills.get(skillState.id);
-                if (skill) {
-                    skill.points = skillState.points;
-                }
-            });
-        }
-
-        this.state.portrait ||= state.portrait;
-        this.state.avatarName ||= state.avatarName;
+        (state.skills || []).forEach(skillState => {
+            const skill = this.skills.get(skillState.id);
+            if (skill) {
+                skill.points = skillState.points;
+            }
+        });
     }
 
     // State management
@@ -202,14 +192,7 @@ export class SkillTree {
                 id: skill.id,
                 points: skill.points
             })),
-            portrait: this.state.portrait,
-            avatarName: this.state.avatarName
         };
-    }
-
-    // Helper methods for state management
-    toggleOpen() {
-        this.state.isOpen = !this.state.isOpen;
     }
 }
 
