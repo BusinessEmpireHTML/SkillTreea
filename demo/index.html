@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Tree Demo</title>
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1>Skill Tree Demo</h1>
+            <button class="toggle-btn">Toggle Tree</button>
+        </header>
+
+        <div class="skill-tree">
+            <!-- Skill tree container -->
+            <div class="skills-container">
+                <!-- Skills will be dynamically inserted here -->
+            </div>
+
+            <!-- Character panel -->
+            <div class="character-panel">
+                <div class="portrait">
+                    <img src="placeholder.jpg" alt="Character portrait">
+                    <div class="portrait-controls">
+                        <button class="prev-portrait">&laquo;</button>
+                        <button class="next-portrait">&raquo;</button>
+                    </div>
+                </div>
+                
+                <div class="character-details">
+                    <input type="text" class="character-name" placeholder="Character Name">
+                    <div class="character-level">Level <span class="level-value">1</span></div>
+                    <div class="character-talents"></div>
+                    <ul class="character-stats"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="skill-template">
+        <div class="skill">
+            <div class="skill-dependency"></div>
+            <div class="skill-icon">
+                <div class="icon"></div>
+            </div>
+            <div class="skill-frame">
+                <div class="skill-tooltip">
+                    <h3 class="skill-name"></h3>
+                    <div class="skill-description"></div>
+                    <ul class="skill-links"></ul>
+                    <div class="rank-info">
+                        <div class="current-rank"></div>
+                        <div class="next-rank"></div>
+                    </div>
+                    <ul class="skill-stats"></ul>
+                    <div class="skill-talents"></div>
+                    <div class="help-message"></div>
+                </div>
+                <div class="skill-points">
+                    <span class="points">0</span>/<span class="max-points">0</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="../skilltree.js" type="module"></script>
+    <script src="./demo.js" type="module"></script>
+</body>
+</html>
