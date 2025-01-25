@@ -1,26 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Horizontal Skill Tree</title>
-  <link rel="stylesheet" href="style.css">
+    <style>
+        .skill-tree {
+            overflow-x: auto;
+            padding: 50px;
+            height: 100vh;
+        }
+
+        .nodes-container {
+            position: relative;
+            min-width: 1000px;
+            min-height: 500px;
+        }
+
+        .node {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: filter 0.3s;
+        }
+
+        .node img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .node.locked {
+            filter: grayscale(100%);
+            cursor: not-allowed;
+        }
+
+        .connection {
+            position: absolute;
+            background: #666;
+            transform-origin: left center;
+            z-index: -1;
+        }
+
+        .description-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            max-width: 300px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <div class="skill-tree">
-  <div class="level" id="level1">
-    <div class="node" data-name="Skill 1"></div>
-  </div>
-  <div class="level" id="level2">
-    <div class="node" data-name="Skill 2"></div>
-    <div class="node" data-name="Skill 3"></div>
-  </div>
-  <div class="level" id="level3">
-    <div class="node" data-name="Skill 4"></div>
-    <div class="node" data-name="Skill 5"></div>
-    <div class="node" data-name="Skill 6"></div>
-  </div>
-</div>
-  <script src="skilltree.js"></script>
+    <div class="skill-tree">
+        <div class="nodes-container" id="nodesContainer"></div>
+    </div>
+    <div class="description-box" id="descriptionBox"></div>
+
+    <script>
+        const nodes = [
+            { 
+                id: 1,
+                parentId: null,
+                x: 100,
+                y: 100,
+                image: 'https://via.placeholder.com/50',
+                description: 'Root Node: Start here to begin your journey!'
+            },
+            {
+                id: 2,
+                parentId: 1,
+                x: 300,
+                y: 100,
+                image: 'https://via.placeholder.com/50/ff0000',
+                description: 'Fire Magic: Unlock basic fire spells'
+            },
+            {
+                id: 3,
+                parentId: 2,
+                x: 500,
+                y: 100,
+                image: 'https://via.placeholder.com/50/00ff00',
+                description: 'Advanced Fire: Master volcanic eruptions'
+            },
+            {
+                id: 4,
+                parentId: 1,
+                x: 300,
+                y: 200,
+                image: 'https://via.placeholder.com/50/0000ff',
+                description: 'Water Magic: Learn basic water spells'
+            }
+        ];
+
+        const purchasedNodes = new Set();
+        const nodesContainer = document.getElementById('nodesContainer');
+        const descriptionBox = document.getElementById('descriptionBox');
+
+        function createNodeElement(node) {
+            const nodeEl = document.createElement('div');
+            nodeEl.className = `node${node.parentId ? ' locked' : ''}`;
+            nodeEl.style.left = `${node.x}px`;
+            nodeEl.style.top = `${node.y}px`;
+            nodeEl.dataset.nodeId = node.id;
+            nodeEl.dataset.parentId = node.parentId;
+            
+            const img = document.createElement('img');
+            img.src = node.image;
+            nodeEl.appendChild(img);
+
+            nodeEl.addEventListener('click', () => {
+                descriptionBox.textContent = node.description;
+                descriptionBox.style.display = 'block';
+                
+                if (!nodeEl.classList.contains('locked')) {
+                    purchasedNodes.add(node.id);
+                    nodeEl.classList.add('purchased');
+                    unlockChildren(node.id);
+                }
+            });
+
+            return nodeEl;
+        }
+
+        function createConnection(parent, child) {
+            const connection = document.createElement('div');
+            connection.className = 'connection';
+            
+            const startX = parent.x + 50;
+            const startY = parent.y + 25;
+            const endX = child.x;
+            const endY = child.y + 25;
+            
+            const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+            const angle = Math.atan2(endY - startY, endX - startX);
+            
+            connection.style.width = `${length}px`;
+            connection.style.left = `${startX}px`;
+            connection.style.top = `${startY}px`;
+            connection.style.transform = `rotate(${angle}rad)`;
+            
+            return connection;
+        }
+
+        function unlockChildren(parentId) {
+            document.querySelectorAll(`.node[data-parent-id="${parentId}"]`).forEach(child => {
+                child.classList.remove('locked');
+            });
+        }
+
+        // Create nodes and connections
+        nodes.forEach(node => {
+            nodesContainer.appendChild(createNodeElement(node));
+            
+            if (node.parentId) {
+                const parent = nodes.find(n => n.id === node.parentId);
+                nodesContainer.appendChild(createConnection(parent, node));
+            }
+        });
+    </script>
 </body>
 </html>
