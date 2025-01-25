@@ -7,20 +7,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="skill-tree-container">
-    <div class="skill-node" data-id="1" data-unlocked="true">
-      <img src="https://via.placeholder.com/80" alt="Skill 1">
-      <div class="description">Skill 1: Basic Ability</div>
-    </div>
-    <div class="skill-node" data-id="2" data-parent="1">
-      <img src="https://via.placeholder.com/80" alt="Skill 2">
-      <div class="description">Skill 2: Advanced Ability</div>
-    </div>
-    <div class="skill-node" data-id="3" data-parent="2">
-      <img src="https://via.placeholder.com/80" alt="Skill 3">
-      <div class="description">Skill 3: Master Ability</div>
-    </div>
+  <div class="skill-tree">
+  <div class="level" id="level1">
+    <div class="node" data-name="Skill 1"></div>
   </div>
+  <div class="level" id="level2">
+    <div class="node" data-name="Skill 2"></div>
+    <div class="node" data-name="Skill 3"></div>
+  </div>
+  <div class="level" id="level3">
+    <div class="node" data-name="Skill 4"></div>
+    <div class="node" data-name="Skill 5"></div>
+    <div class="node" data-name="Skill 6"></div>
+  </div>
+</div>
   <script src="skilltree.js"></script>
 </body>
 </html>
